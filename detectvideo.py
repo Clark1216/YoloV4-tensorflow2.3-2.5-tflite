@@ -2,7 +2,8 @@ import time
 import tensorflow as tf
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if len(physical_devices) > 0:
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    for i in range(len(physical_devices)):
+        tf.config.experimental.set_memory_growth(physical_devices[i], True)
 from absl import app, flags, logging
 from absl.flags import FLAGS
 import core.utils as utils
@@ -47,8 +48,9 @@ def main(_argv):
         print(output_details)
     else:
         saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERVING])
+        # saved_model_loaded = tf.keras.models.load_model(FLAGS.weights)
         infer = saved_model_loaded.signatures['serving_default']
-    
+
     if FLAGS.output:
         # by default VideoCapture returns float instead of int
         width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -68,7 +70,7 @@ def main(_argv):
                 print("Video processing complete")
                 break
             raise ValueError("No image! Try with another video format")
-        
+
         frame_size = frame.shape[:2]
         image_data = cv2.resize(frame, (input_size, input_size))
         image_data = image_data / 255.
@@ -88,6 +90,7 @@ def main(_argv):
         else:
             batch_data = tf.constant(image_data)
             pred_bbox = infer(batch_data)
+            print("77777777777777777777",pred_bbox)
             for key, value in pred_bbox.items():
                 boxes = value[:, :, 0:4]
                 pred_conf = value[:, :, 4:]
@@ -106,8 +109,10 @@ def main(_argv):
         curr_time = time.time()
         exec_time = curr_time - prev_time
         result = np.asarray(image)
-        info = "time: %.2f ms" %(1000*exec_time)
-        print(info)
+        # info = "time: %.2f ms" %(1000*exec_time)
+        # print(info)
+        info2 = "FPS: %.2f " %(1/exec_time)
+        print(info2)
 
         result = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         if not FLAGS.dis_cv2_window:
